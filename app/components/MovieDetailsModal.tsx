@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BackHandler, Button, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import colors from '../constants/colors';
-import { OMDB_API_KEY, OMDB_BASE } from '../constants/config';
-import { Movie } from '../types';
+import colors from '../_constants/colors';
+import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
+import { Movie } from '../_types';
 
 type Props = {
   visible: boolean;

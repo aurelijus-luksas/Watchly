@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import colors from '../constants/colors';
-import { Movie } from '../types';
+import colors from '../_constants/colors';
+import { Movie } from '../_types';
 
 type Props = {
   movie: Movie;

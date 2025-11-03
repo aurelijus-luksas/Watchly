@@ -23,8 +23,7 @@ export type Movie = {
   createdAt?: string;
 };
 
-
-// Default export to satisfy expo-router route requirement for files under `app/`.
+// Provide a no-op default export so expo-router does not warn about missing default export.
 export default function _TypesPlaceholder() {
-  return null as any;
+  return null;
 }

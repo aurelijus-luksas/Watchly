@@ -11,9 +11,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import colors from '../constants/colors';
-import { OMDB_API_KEY, OMDB_BASE } from '../constants/config';
-import { Movie, Section } from '../types';
+import colors from '../_constants/colors';
+import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
+import { Movie, Section } from '../_types';
 
 type Props = {
   visible: boolean;

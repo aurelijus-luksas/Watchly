@@ -1,4 +1,3 @@
-
 const colors = {
   // dark theme palette with neutral primary
   background: '#0b1020',
@@ -11,8 +10,3 @@ const colors = {
 };
 
 export default colors;
-
-// Default export to satisfy expo-router route requirement for files under `app/`.
-export function _ColorsPlaceholder() {
-  return null as any;
-}

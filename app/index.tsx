@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import colors from './_constants/colors';
+import { Movie } from './_types';
 import AddMovieModal from './components/AddMovieModal';
 import MovieCard from './components/MovieCard';
 import MovieDetailsModal from './components/MovieDetailsModal';
-import colors from './constants/colors';
-import { Movie } from './types';
 
 // Try to use AsyncStorage if available. If not, fallback to in-memory.
 let AsyncStorage: any = null;

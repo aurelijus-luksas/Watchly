@@ -8,8 +8,8 @@ export const OMDB_BASE = 'https://www.omdbapi.com/';
 export const TRAKT_CLIENT_ID = extras.TRAKT_CLIENT_ID || process.env.TRAKT_CLIENT_ID || '';
 export const TRAKT_BASE = 'https://api.trakt.tv';
 
-// Default export to satisfy expo-router route requirement for files under `app/`.
-// This file is intended to be a plain module, so the default component renders nothing.
-export default function _Config() {
+// Provide a no-op default export so expo-router does not treat this module as a missing-route component.
+import React from 'react';
+export default function _ConfigPlaceholder() {
 	return null;
 }
