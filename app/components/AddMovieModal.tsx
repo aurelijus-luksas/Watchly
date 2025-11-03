@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  BackHandler,
-  Button,
-  FlatList,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    BackHandler,
+    Button,
+    FlatList,
+    Image,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import colors from '../constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../constants/config';
@@ -35,6 +35,9 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
   const [plot, setPlot] = useState<string | undefined>(undefined);
   const [imdbID, setImdbID] = useState<string | undefined>(undefined);
   const [imdbRating, setImdbRating] = useState<string | undefined>(undefined);
+  const [genre, setGenre] = useState<string | undefined>(undefined);
+  const [mediaType, setMediaType] = useState<string | undefined>(undefined);
+  const [runtime, setRuntime] = useState<string | undefined>(undefined);
 
   // search state
   const [query, setQuery] = useState('');
@@ -63,6 +66,9 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
       year,
       plot,
       imdbRating,
+  runtime,
+      genre,
+      mediaType,
       section,
       comment: comment.trim() || undefined,
       createdAt: new Date().toISOString(),
@@ -78,6 +84,9 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
     setPlot(undefined);
     setImdbID(undefined);
     setImdbRating(undefined);
+  setGenre(undefined);
+  setMediaType(undefined);
+    setRuntime(undefined);
     setRatingError(undefined);
     onClose();
   }
@@ -129,7 +138,10 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
     setYear(item.Year || details?.Year);
     setPlot(details?.Plot);
     setImdbID(item.imdbID);
-    setImdbRating(details?.imdbRating);
+      setImdbRating(details?.imdbRating);
+      setGenre(details?.Genre);
+      setMediaType(details?.Type);
+      setRuntime(details?.Runtime);
     // clear search UI
     setResults([]);
     setQuery('');
@@ -180,11 +192,15 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
           {results.length > 0 && (
             // dropdown box positioned under the input
             <View style={styles.dropdown}>
-              <FlatList
-                data={results}
-                keyExtractor={(i) => i.imdbID}
-                keyboardShouldPersistTaps="handled"
-                style={{ maxHeight: 240 }}
+        <FlatList
+          data={results}
+          keyExtractor={(i) => i.imdbID}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled={true}
+          showsVerticalScrollIndicator={true}
+          scrollEnabled={true}
+          contentContainerStyle={{ paddingBottom: 6 }}
+          style={{ maxHeight: 240, height: 240 }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.resultRow}
@@ -298,7 +314,8 @@ const styles = StyleSheet.create({
     shadowColor: colors.elevationShadow,
     shadowOpacity: 0.06,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 12,
+    zIndex: 1000,
     padding: 6,
   },
 });

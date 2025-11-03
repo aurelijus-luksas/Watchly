@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Button, FlatList, Platform, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddMovieModal from './components/AddMovieModal';
 import MovieCard from './components/MovieCard';
 import MovieDetailsModal from './components/MovieDetailsModal';
@@ -16,6 +17,7 @@ try {
 }
 
 export default function Index() {
+  const insets = useSafeAreaInsets();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Movie | null>(null);
@@ -49,21 +51,25 @@ export default function Index() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}> 
       <View style={styles.header}>
-        <Text style={styles.title}>Movies</Text>
-        <Button title="Add" onPress={() => setShowAdd(true)} />
+        <Text style={styles.title}>movieRate</Text>
+        <TouchableOpacity onPress={() => setShowAdd(true)}>
+          <Text style={{ color: colors.primary, fontWeight: '700' }}>+ Add</Text>
+        </TouchableOpacity>
       </View>
 
       {movies.length === 0 ? (
         <View style={styles.empty}>
-          <Text>No movies yet. Tap Add to start.</Text>
+          <Text style={{ color: colors.muted }}>No movies yet. Add your first watched movie.</Text>
+          <View style={{ height: 12 }} />
+          <Button title="Add movie" onPress={() => setShowAdd(true)} />
         </View>
-        ) : (
+      ) : (
         <FlatList
           data={movies}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={{ padding: 12 }}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
             <MovieCard
               movie={item}
@@ -76,7 +82,15 @@ export default function Index() {
         />
       )}
 
-      <AddMovieModal visible={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAdd} />
+      <AddMovieModal
+        visible={showAdd}
+        onClose={() => setShowAdd(false)}
+        onAdd={(movie) => {
+          handleAdd(movie);
+          setShowAdd(false);
+        }}
+      />
+
       <MovieDetailsModal
         visible={showDetails}
         movie={selected}
@@ -85,13 +99,16 @@ export default function Index() {
           setMovies((s) => s.filter((m) => m.id !== id));
           setShowDetails(false);
         }}
+        onUpdate={(updated) => {
+          setMovies((s) => s.map((m) => (m.id === updated.id ? updated : m)));
+        }}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12 },
   title: { fontSize: 20, fontWeight: '700', color: colors.text },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },

@@ -15,5 +15,10 @@ export type Movie = {
   year?: string;
   plot?: string;
   imdbRating?: string; // OMDb's aggregated rating string
+  // OMDb 'Genre' field (comma-separated) and 'Type' (movie, series, episode, game)
+  genre?: string;
+  mediaType?: string;
+  // OMDb runtime string like '142 min'
+  runtime?: string;
   createdAt?: string;
 };

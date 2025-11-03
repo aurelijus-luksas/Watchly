@@ -25,8 +25,10 @@ export default function MovieCard({ movie, onPress }: Props) {
             </Text>
             <View style={styles.metaRow}>
               <Text style={styles.sectionPill}>{movie.section ?? 'Unsorted'}</Text>
+              {movie.mediaType ? <Text style={styles.typePill}>{movie.mediaType}</Text> : null}
               {movie.imdbRating ? <Text style={styles.imdb}>IMDB {movie.imdbRating}</Text> : null}
             </View>
+            {movie.genre ? <Text style={styles.genre} numberOfLines={1}>{movie.genre}</Text> : null}
             {movie.comment ? <Text style={styles.comment} numberOfLines={2}>{movie.comment}</Text> : null}
           </View>
 
@@ -75,6 +77,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginRight: 8,
   },
+  typePill: {
+    backgroundColor: '#162028',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    color: colors.text,
+    fontSize: 12,
+    marginRight: 8,
+  },
+  genre: { color: colors.muted, fontSize: 12, marginTop: 6 },
   imdb: { color: colors.muted, fontSize: 12 },
   badgeRow: { alignItems: 'flex-end' },
   ratingBadge: {
