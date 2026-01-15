@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
-  Button,
-  FlatList,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
@@ -45,6 +44,17 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
   const [results, setResults] = useState<Array<{ Title: string; Year: string; imdbID: string; Poster: string }>>([]);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<number | null>(null);
+
+  function dedupeByImdbId(items: Array<{ imdbID: string }>) {
+    const seen = new Set<string>();
+    const unique: typeof items = [];
+    for (const item of items) {
+      if (seen.has(item.imdbID)) continue;
+      seen.add(item.imdbID);
+      unique.push(item);
+    }
+    return unique;
+  }
 
   function handleAdd() {
     if (!title.trim()) return;
@@ -105,10 +115,10 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
       return;
     }
     try {
-      const res = await fetch(`${OMDB_BASE}?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(q)}&type=movie`);
+      const res = await fetch(`${OMDB_BASE}?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(q)}`);
       const json = await res.json();
       if (json.Response === 'True') {
-        setResults(json.Search || []);
+        setResults(dedupeByImdbId(json.Search || []));
       } else {
         setResults([]);
       }
@@ -180,108 +190,87 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
       <View style={styles.container}>
         <Text style={styles.heading}>{isToWatch ? 'Add movie to watch' : 'Add watched movie'}</Text>
 
-        <View style={styles.searchContainer}>
-          <TextInput placeholder="Search movie (title)" value={query} onChangeText={setQuery} style={styles.input} placeholderTextColor={colors.text} />
-          {searching ? <Text style={{ color: colors.muted, marginBottom: 8 }}>Searching...</Text> : null}
+        <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={styles.searchContainer}>
+            <TextInput placeholder="Search title (movie, series, etc.)" value={query} onChangeText={setQuery} style={styles.input} placeholderTextColor={colors.text} />
+            {searching ? <Text style={{ color: colors.muted, marginBottom: 8 }}>Searching...</Text> : null}
 
-          {!OMDB_API_KEY ? (
-            <Text style={styles.missingKey}>
-              OMDb API key is not set. Add OMDB_API_KEY to your .env and restart the app to enable search.
-            </Text>
-          ) : null}
-        </View>
+            {!OMDB_API_KEY ? (
+              <Text style={styles.missingKey}>
+                OMDb API key is not set. Add OMDB_API_KEY to your .env and restart the app to enable search.
+              </Text>
+            ) : null}
+          </View>
 
-        {results.length > 0 && (
-          <FlatList
-            data={results}
-            keyExtractor={(i) => i.imdbID}
-            scrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-            style={styles.resultsDropdown}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.resultRow}
-                onPress={() => {
-                  pickResult(item);
-                }}
-              >
-                {item.Poster && item.Poster !== 'N/A' ? (
-                  <Image source={{ uri: item.Poster }} style={styles.resultPoster} />
-                ) : (
-                  <View style={[styles.resultPoster, { backgroundColor: '#ddd' }]} />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '600', color: colors.text }}>{item.Title}</Text>
-                  <Text style={{ color: colors.muted }}>{item.Year}</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-  <TextInput placeholder="Title" value={title} onChangeText={setTitle} style={styles.input} placeholderTextColor={colors.text} />
-        {!isToWatch && (
-          <>
-            <TextInput
-              placeholder="Rating (1-10)"
-              value={rating}
-              onChangeText={(t) => {
-                setRating(t);
-                if (ratingError) setRatingError(undefined);
-              }}
-              style={styles.input}
-              placeholderTextColor={colors.muted}
-              keyboardType="numeric"
-            />
-            {ratingError ? <Text style={{ color: '#b33', marginBottom: 6 }}>{ratingError}</Text> : null}
-          </>
-        )}
-        {/* optional display of fetched details */}
-        {year ? <Text style={{ color: '#666', marginBottom: 6 }}>Year: {year}</Text> : null}
-        {plot ? <Text style={{ color: '#666', marginBottom: 6 }}>{plot}</Text> : null}
-        {/* simple picker fallback (custom dropdown for themed open state) */}
-        <View style={styles.pickerRow}>
-          <Text style={{ marginRight: 8, color: colors.text }}>Section:</Text>
-          <TouchableOpacity
-            style={styles.picker}
-            onPress={() => setSectionPickerVisible(true)}
-            activeOpacity={0.8}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.text }}>{section}</Text>
-              <Text style={{ color: colors.muted }}>▾</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <Modal
-          visible={sectionPickerVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSectionPickerVisible(false)}
-        >
-          <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setSectionPickerVisible(false)}>
-            <View style={styles.sectionDropdownContainer}>
-              {sections.map((s) => (
+          {results.length > 0 && (
+            <View style={styles.resultsDropdown}>
+              {results.map((item) => (
                 <TouchableOpacity
-                  key={s}
-                  style={styles.sectionItem}
+                  key={item.imdbID}
+                  style={styles.resultRow}
                   onPress={() => {
-                    setSection(s);
-                    setSectionPickerVisible(false);
+                    pickResult(item);
                   }}
                 >
-                  <Text style={[styles.sectionItemText, s === section ? { fontWeight: '700' } : {}]}>{s}</Text>
+                  {item.Poster && item.Poster !== 'N/A' ? (
+                    <Image source={{ uri: item.Poster }} style={styles.resultPoster} />
+                  ) : (
+                    <View style={[styles.resultPoster, { backgroundColor: '#ddd' }]} />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '600', color: colors.text }}>{item.Title}</Text>
+                    <Text style={{ color: colors.muted }}>{item.Year}</Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
-          </TouchableOpacity>
-        </Modal>
-  <TextInput placeholder="Comment" value={comment} onChangeText={setComment} style={[styles.input, { height: 80 }]} multiline placeholderTextColor={colors.text} />
+          )}
 
-        <View style={styles.buttons}>
-          <Button title="Cancel" onPress={onClose} />
-          <Button title="Add" onPress={handleAdd} />
+          <TextInput placeholder="Title" value={title} onChangeText={setTitle} style={styles.input} placeholderTextColor={colors.text} />
+          {!isToWatch && (
+            <>
+              <TextInput
+                placeholder="Rating (1-10)"
+                value={rating}
+                onChangeText={(t) => {
+                  setRating(t);
+                  if (ratingError) setRatingError(undefined);
+                }}
+                style={styles.input}
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+              />
+              {ratingError ? <Text style={{ color: '#b33', marginBottom: 6 }}>{ratingError}</Text> : null}
+            </>
+          )}
+          {year ? <Text style={{ color: '#666', marginBottom: 6 }}>Year: {year}</Text> : null}
+          {plot ? <Text style={{ color: '#666', marginBottom: 6 }}>{plot}</Text> : null}
+
+          <Text style={styles.sectionLabel}>Section:</Text>
+          <View style={styles.sectionButtonsRow}>
+            {sections.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.sectionButton, section === s && styles.sectionButtonActive]}
+                onPress={() => setSection(s)}
+              >
+                <Text style={[styles.sectionButtonText, section === s && styles.sectionButtonTextActive]}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TextInput placeholder="Comment" value={comment} onChangeText={setComment} style={[styles.input, { height: 80 }]} multiline placeholderTextColor={colors.text} />
+        </ScrollView>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={onClose}>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleAdd}>
+            <Text style={styles.buttonTextPrimary}>Add</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -289,26 +278,76 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: colors.subtle },
-  heading: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: colors.text },
-  input: { backgroundColor: colors.surface, padding: 10, borderRadius: 8, marginBottom: 10, color: colors.text },
-  searchContainer: { position: 'relative', zIndex: 10, overflow: 'visible' },
-  pickerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  picker: { flex: 1, backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  buttons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  resultRow: { flexDirection: 'row', padding: 8, alignItems: 'center', borderRadius: 8 },
-  resultPoster: { width: 48, height: 72, borderRadius: 4, marginRight: 8 },
-  missingKey: { color: '#b33', marginBottom: 8 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-  sectionDropdownContainer: { backgroundColor: colors.surface, borderRadius: 8, overflow: 'hidden' },
-  sectionItem: { paddingVertical: 12, paddingHorizontal: 16, borderBottomColor: '#111', borderBottomWidth: 1 },
-  sectionItemText: { color: colors.text },
-  resultsDropdown: {
-    maxHeight: 400,
-    backgroundColor: colors.surface,
+  container: { flex: 1, backgroundColor: colors.background },
+  heading: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, color: colors.text },
+  scrollContent: { flex: 1, paddingHorizontal: 16 },
+  input: { backgroundColor: colors.surface, padding: 12, borderRadius: 10, marginBottom: 12, color: colors.text, fontSize: 16 },
+  searchContainer: { marginBottom: 12 },
+  sectionLabel: { color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  sectionButtonsRow: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  sectionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.muted + '30',
+  },
+  sectionButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sectionButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sectionButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  pickerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  picker: { flex: 1, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  buttonContainer: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 16, borderTopWidth: 1, borderTopColor: colors.muted + '20' },
+  button: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.muted,
+  },
+  buttonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonTextPrimary: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resultRow: { flexDirection: 'row', padding: 12, alignItems: 'center', borderRadius: 10, marginBottom: 8 },
+  resultPoster: { width: 48, height: 72, borderRadius: 6, marginRight: 12 },
+  missingKey: { color: '#b33', marginBottom: 12, fontSize: 14 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  sectionDropdownContainer: { backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' },
+  sectionItem: { paddingVertical: 14, paddingHorizontal: 16, borderBottomColor: colors.muted + '20', borderBottomWidth: 1 },
+  sectionItemText: { color: colors.text, fontSize: 16 },
+  resultsDropdown: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.muted + '30',
+    overflow: 'hidden',
   },
 });

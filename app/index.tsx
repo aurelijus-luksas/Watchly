@@ -1,5 +1,7 @@
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Button, FlatList, Modal, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from './_constants/colors';
 import { Movie } from './_types';
@@ -16,10 +18,12 @@ try {
   // noop - fallback
 }
 
-type MediaFilter = 'all' | 'movies' | 'series' | 'anime';
+type MediaFilter = 'all' | 'movies' | 'series' | 'animation';
+const BACKUP_FILE_NAME = 'movierate-backup.json';
 
 export default function Index() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<'watched' | 'toWatch'>('watched');
   const [mediaFilter, setMediaFilter] = useState<MediaFilter>('all');
   const [watchedMovies, setWatchedMovies] = useState<Movie[]>([]);
@@ -27,6 +31,8 @@ export default function Index() {
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Movie | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showImportText, setShowImportText] = useState(false);
+  const [importText, setImportText] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -71,15 +77,88 @@ export default function Index() {
     }
   }
 
+  async function exportData() {
+    try {
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        watched: watchedMovies,
+        toWatch: toWatchMovies,
+      };
+      const jsonString = JSON.stringify(payload, null, 2);
+      
+      try {
+        await Share.share({
+          message: jsonString,
+          title: 'MovieRate Backup',
+        });
+      } catch (e) {
+        Alert.alert('Share error', 'Could not share backup. Try copying the text manually.');
+      }
+    } catch (e) {
+      Alert.alert('Export failed', 'Could not create backup.');
+    }
+  }
+
+  async function importData() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+      const content = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 });
+      const parsed = JSON.parse(content);
+      const nextWatched = Array.isArray(parsed?.watched) ? parsed.watched : parsed?.watchedMovies;
+      const nextToWatch = Array.isArray(parsed?.toWatch) ? parsed.toWatch : parsed?.toWatchMovies;
+
+      if (!Array.isArray(nextWatched) || !Array.isArray(nextToWatch)) {
+        Alert.alert('Import failed', 'File must contain watched and toWatch arrays.');
+        return;
+      }
+
+      setWatchedMovies(nextWatched as Movie[]);
+      setToWatchMovies(nextToWatch as Movie[]);
+      Alert.alert('Import complete', 'Lists updated from backup.');
+    } catch (e) {
+      Alert.alert('Import failed', 'Could not read or parse the backup file.');
+    }
+  }
+
+  function importFromText() {
+    try {
+      if (!importText.trim()) {
+        Alert.alert('Import failed', 'Paste JSON text first.');
+        return;
+      }
+      const parsed = JSON.parse(importText);
+      const nextWatched = Array.isArray(parsed?.watched) ? parsed.watched : parsed?.watchedMovies;
+      const nextToWatch = Array.isArray(parsed?.toWatch) ? parsed.toWatch : parsed?.toWatchMovies;
+
+      if (!Array.isArray(nextWatched) || !Array.isArray(nextToWatch)) {
+        Alert.alert('Import failed', 'JSON must contain watched and toWatch arrays.');
+        return;
+      }
+
+      setWatchedMovies(nextWatched as Movie[]);
+      setToWatchMovies(nextToWatch as Movie[]);
+      setImportText('');
+      setShowImportText(false);
+      Alert.alert('Import complete', 'Lists updated from backup.');
+    } catch (e) {
+      Alert.alert('Import failed', 'Invalid JSON format.');
+    }
+  }
+
   const currentMovies = activeTab === 'watched' ? watchedMovies : toWatchMovies;
   
   const filteredMovies = currentMovies.filter((movie) => {
-    if (mediaFilter === 'all') return true;
     const type = movie.mediaType?.toLowerCase() || '';
-    // Match against different filter types
-    if (mediaFilter === 'movies') return type === 'movie';
-    if (mediaFilter === 'series') return type === 'series';
-    if (mediaFilter === 'anime') return type.includes('anime');
+    const genre = movie.genre?.toLowerCase() || '';
+    const isAnimation = genre.includes('animation') || genre.includes('anime');
+
+    if (mediaFilter === 'all') return true;
+    if (mediaFilter === 'animation') return isAnimation;
+    if (mediaFilter === 'movies') return type === 'movie' && !isAnimation;
+    if (mediaFilter === 'series') return type === 'series' && !isAnimation;
     return true;
   });
 
@@ -109,26 +188,72 @@ export default function Index() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filterContainer}>
-        {(['all', 'movies', 'series', 'anime'] as MediaFilter[]).map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[styles.filterButton, mediaFilter === filter && styles.activeFilterButton]}
-            onPress={() => setMediaFilter(filter)}
-          >
-            <Text style={[styles.filterText, mediaFilter === filter && styles.activeFilterText]}>
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.menuPager}
+        style={styles.menuStrip}
+      >
+        <View style={[styles.menuPage, { width }]}>
+          <View style={styles.filterContainer}>
+            {(['all', 'movies', 'series', 'animation'] as MediaFilter[]).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.filterButton, mediaFilter === filter && styles.activeFilterButton]}
+                onPress={() => setMediaFilter(filter)}
+              >
+                <Text style={[styles.filterText, mediaFilter === filter && styles.activeFilterText]}>
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.menuHint}>Filters • swipe →</Text>
+        </View>
+
+        <View style={[styles.menuPage, { width }]}>
+          <View style={styles.backupRow}>
+            <TouchableOpacity style={styles.backupButton} onPress={exportData}>
+              <Text style={styles.backupButtonText}>Export JSON</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backupButton} onPress={importData}>
+              <Text style={styles.backupButtonText}>Import File</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backupButton} onPress={() => setShowImportText(true)}>
+              <Text style={styles.backupButtonText}>Import Text</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.menuHint}>Backup/Restore • swipe ←</Text>
+        </View>
+      </ScrollView>
+
+      <Modal visible={showImportText} transparent animationType="fade" onRequestClose={() => setShowImportText(false)}>
+        <View style={styles.importOverlay}>
+          <View style={styles.importModal}>
+            <Text style={styles.importTitle}>Paste JSON Backup</Text>
+            <TextInput
+              style={styles.importInput}
+              placeholder="Paste your backup JSON here..."
+              placeholderTextColor={colors.muted}
+              value={importText}
+              onChangeText={setImportText}
+              multiline
+            />
+            <View style={styles.importButtons}>
+              <Button title="Cancel" onPress={() => { setShowImportText(false); setImportText(''); }} />
+              <Button title="Import" onPress={importFromText} />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {filteredMovies.length === 0 ? (
         <View style={styles.empty}>
           <Text style={{ color: colors.muted }}>
             {currentMovies.length === 0
               ? `No movies yet. Add your first ${activeTab === 'watched' ? 'watched' : 'to watch'} movie.`
-              : `No ${mediaFilter === 'all' ? '' : mediaFilter} movies found.`}
+              : `No ${mediaFilter === 'all' ? '' : mediaFilter + ' '}items found.`}
           </Text>
           <View style={{ height: 12 }} />
           <Button title="Add movie" onPress={() => setShowAdd(true)} />
@@ -137,7 +262,8 @@ export default function Index() {
         <FlatList
           data={filteredMovies}
           keyExtractor={(m) => m.id}
-          contentContainerStyle={{ padding: 16 }}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <MovieCard
               movie={item}
@@ -215,8 +341,86 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 0,
     gap: 8,
+  },
+  menuPager: {
+    flexGrow: 0,
+  },
+  menuStrip: {
+    flexGrow: 0,
+  },
+  menuPage: {
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  menuHint: {
+    paddingHorizontal: 12,
+    color: colors.muted,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 32,
+    alignItems: 'stretch',
+  },
+  backupRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    gap: 6,
+  },
+  backupButton: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.muted + '30',
+    alignItems: 'center',
+  },
+  backupButtonText: {
+    fontWeight: '600',
+    color: colors.text,
+    fontSize: 12,
+  },
+  importOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  importModal: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: '80%',
+  },
+  importTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  importInput: {
+    backgroundColor: colors.background,
+    borderColor: colors.muted + '30',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    color: colors.text,
+    height: 150,
+    marginBottom: 12,
+    textAlignVertical: 'top',
+  },
+  importButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   filterButton: {
     paddingHorizontal: 12,
