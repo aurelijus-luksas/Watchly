@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Movie-Rate",
+    "name": "Watchly",
     "slug": "Movie-Rate",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aurelijusluksas.movierate"
+
     },
     "android": {
       "adaptiveIcon": {
