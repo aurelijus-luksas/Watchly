@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BackHandler, Button, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
 import { Movie } from '../_types';
@@ -10,9 +10,11 @@ type Props = {
   onClose: () => void;
   onDelete?: (id: string) => void;
   onUpdate?: (movie: Movie) => void;
+  isToWatch?: boolean;
+  onMarkAsWatched?: (movie: Movie, rating: number) => void;
 };
 
-export default function MovieDetailsModal({ visible, movie, onClose, onDelete, onUpdate }: Props) {
+export default function MovieDetailsModal({ visible, movie, onClose, onDelete, onUpdate, isToWatch, onMarkAsWatched }: Props) {
   // Hooks must be called unconditionally. Initialize state using optional chaining
   const [deleteArmed, setDeleteArmed] = useState(false);
   const deleteTimeoutRef = React.useRef<number | null>(null);
@@ -78,6 +80,36 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
     onClose();
   }
 
+  function handleMarkAsWatched() {
+    if (!localRating.trim()) {
+      alert('Please enter a rating (1-10)');
+      return;
+    }
+    const rating = Number(localRating);
+    if (Number.isNaN(rating) || rating < 1 || rating > 10) {
+      alert('Rating must be a number between 1 and 10');
+      return;
+    }
+    const m = movie!;
+    const watchedMovie: Movie = {
+      id: m.id,
+      title: m.title,
+      rating,
+      poster: m.poster,
+      imdbID: m.imdbID,
+      year: m.year,
+      plot: m.plot,
+      imdbRating: m.imdbRating,
+      genre: m.genre,
+      mediaType: m.mediaType,
+      section: m.section,
+      comment: localComment.trim() || undefined,
+      createdAt: m.createdAt,
+    };
+    try { onMarkAsWatched?.(watchedMovie, rating); } catch (e) {}
+    onClose();
+  }
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
@@ -117,38 +149,43 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
         />
 
         <View style={styles.actions}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Button title="Close" onPress={onClose} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button title="Save" onPress={handleSave} />
-          </View>
+          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={onClose}>
+            <Text style={styles.buttonText}>Close</Text>
+          </TouchableOpacity>
+          {isToWatch ? (
+            <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleMarkAsWatched}>
+              <Text style={styles.buttonTextPrimary}>Mark as Watched</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleSave}>
+              <Text style={styles.buttonTextPrimary}>Save</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Delete placed at the bottom so user must scroll down to see it */}
-        <View style={{ marginTop: 36 }} />
-        <View style={{ alignItems: 'center', marginBottom: 40 }}>
-          <View style={{ width: 200 }}>
-            <Button
-              color={deleteArmed ? '#b33' : undefined}
-              title={deleteArmed ? 'Confirm delete' : 'Delete'}
-              onPress={() => {
-                if (!deleteArmed) {
-                  setDeleteArmed(true);
-                  deleteTimeoutRef.current = setTimeout(() => setDeleteArmed(false), 4000) as unknown as number;
-                  return;
-                }
-                // confirmed
-                try { (onDelete as any)?.(movie.id); } catch (e) {}
-                setDeleteArmed(false);
-                if (deleteTimeoutRef.current) {
-                  clearTimeout(deleteTimeoutRef.current as unknown as number);
-                  deleteTimeoutRef.current = null;
-                }
-                onClose();
-              }}
-            />
-          </View>
+        {/* Delete placed at the very bottom so user must scroll down to see it */}
+        <View style={{ height: 300 }} />
+        <View style={{ alignItems: 'center', marginBottom: 60 }}>
+          <TouchableOpacity 
+            style={[styles.deleteButton, deleteArmed && styles.deleteButtonArmed]}
+            onPress={() => {
+              if (!deleteArmed) {
+                setDeleteArmed(true);
+                deleteTimeoutRef.current = setTimeout(() => setDeleteArmed(false), 4000) as unknown as number;
+                return;
+              }
+              // confirmed
+              try { (onDelete as any)?.(movie.id); } catch (e) {}
+              setDeleteArmed(false);
+              if (deleteTimeoutRef.current) {
+                clearTimeout(deleteTimeoutRef.current as unknown as number);
+                deleteTimeoutRef.current = null;
+              }
+              onClose();
+            }}
+          >
+            <Text style={styles.deleteButtonText}>{deleteArmed ? 'Confirm delete' : 'Delete'}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </Modal>
@@ -167,5 +204,47 @@ const styles = StyleSheet.create({
   input: { backgroundColor: colors.surface, color: colors.text, padding: 10, borderRadius: 8, marginTop: 6 },
   posterSmall: { width: 140, height: 210, borderRadius: 8, marginBottom: 12, backgroundColor: colors.surface, alignSelf: 'center' },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 },
-  actions: { flexDirection: 'row', marginTop: 16 },
+  actions: { flexDirection: 'row', marginTop: 16, gap: 8 },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.muted,
+  },
+  buttonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonTextPrimary: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: '#cc3333',
+  },
+  deleteButtonArmed: {
+    backgroundColor: '#cc3333',
+  },
+  deleteButtonText: {
+    color: '#cc3333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

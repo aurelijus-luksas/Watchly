@@ -43,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "OMDB_API_KEY": "2f61eb91",
+      "router": {},
+      "eas": {
+        "projectId": "99233569-160e-48aa-9546-fba6d4a674de"
+      }
     }
   }
 }

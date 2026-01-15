@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    BackHandler,
-    Button,
-    FlatList,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  BackHandler,
+  Button,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
@@ -19,11 +19,12 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onAdd: (movie: Movie) => void;
+  isToWatch?: boolean;
 };
 
 const sections: Section[] = ['recommend', 'good', 'neutral', 'bad'];
 
-export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
+export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Props) {
   const [title, setTitle] = useState('');
   const [rating, setRating] = useState<string>('');
   const [section, setSection] = useState<Section>('recommend');
@@ -47,8 +48,8 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
 
   function handleAdd() {
     if (!title.trim()) return;
-    // validate rating if provided
-    if (rating.trim()) {
+    // validate rating if provided (not required for toWatch)
+    if (!isToWatch && rating.trim()) {
       const n = Number(rating);
       if (Number.isNaN(n) || n < 1 || n > 10) {
         setRatingError('Rating must be a number between 1 and 10');
@@ -60,7 +61,7 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
     const movie: Movie = {
       id: String(Date.now()),
       title: title.trim(),
-      rating: rating ? Number(rating) : undefined,
+      rating: isToWatch ? undefined : (rating ? Number(rating) : undefined),
       poster,
       imdbID,
       year,
@@ -177,7 +178,7 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <Text style={styles.heading}>Add watched movie</Text>
+        <Text style={styles.heading}>{isToWatch ? 'Add movie to watch' : 'Add watched movie'}</Text>
 
         <View style={styles.searchContainer}>
           <TextInput placeholder="Search movie (title)" value={query} onChangeText={setQuery} style={styles.input} placeholderTextColor={colors.text} />
@@ -188,55 +189,53 @@ export default function AddMovieModal({ visible, onClose, onAdd }: Props) {
               OMDb API key is not set. Add OMDB_API_KEY to your .env and restart the app to enable search.
             </Text>
           ) : null}
-
-          {results.length > 0 && (
-            // dropdown box positioned under the input
-            <View style={styles.dropdown}>
-        <FlatList
-          data={results}
-          keyExtractor={(i) => i.imdbID}
-          keyboardShouldPersistTaps="always"
-          nestedScrollEnabled={true}
-          showsVerticalScrollIndicator={true}
-          scrollEnabled={true}
-          contentContainerStyle={{ paddingBottom: 6 }}
-          style={{ maxHeight: 240, height: 240 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.resultRow}
-                    onPress={() => {
-                      pickResult(item);
-                    }}
-                  >
-                    {item.Poster && item.Poster !== 'N/A' ? (
-                      <Image source={{ uri: item.Poster }} style={styles.resultPoster} />
-                    ) : (
-                      <View style={[styles.resultPoster, { backgroundColor: '#ddd' }]} />
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: '600', color: colors.text }}>{item.Title}</Text>
-                      <Text style={{ color: colors.muted }}>{item.Year}</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
         </View>
 
+        {results.length > 0 && (
+          <FlatList
+            data={results}
+            keyExtractor={(i) => i.imdbID}
+            scrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            style={styles.resultsDropdown}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.resultRow}
+                onPress={() => {
+                  pickResult(item);
+                }}
+              >
+                {item.Poster && item.Poster !== 'N/A' ? (
+                  <Image source={{ uri: item.Poster }} style={styles.resultPoster} />
+                ) : (
+                  <View style={[styles.resultPoster, { backgroundColor: '#ddd' }]} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', color: colors.text }}>{item.Title}</Text>
+                  <Text style={{ color: colors.muted }}>{item.Year}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+
   <TextInput placeholder="Title" value={title} onChangeText={setTitle} style={styles.input} placeholderTextColor={colors.text} />
-        <TextInput
-          placeholder="Rating (1-10)"
-          value={rating}
-          onChangeText={(t) => {
-            setRating(t);
-            if (ratingError) setRatingError(undefined);
-          }}
-          style={styles.input}
-          placeholderTextColor={colors.muted}
-          keyboardType="numeric"
-        />
-        {ratingError ? <Text style={{ color: '#b33', marginBottom: 6 }}>{ratingError}</Text> : null}
+        {!isToWatch && (
+          <>
+            <TextInput
+              placeholder="Rating (1-10)"
+              value={rating}
+              onChangeText={(t) => {
+                setRating(t);
+                if (ratingError) setRatingError(undefined);
+              }}
+              style={styles.input}
+              placeholderTextColor={colors.muted}
+              keyboardType="numeric"
+            />
+            {ratingError ? <Text style={{ color: '#b33', marginBottom: 6 }}>{ratingError}</Text> : null}
+          </>
+        )}
         {/* optional display of fetched details */}
         {year ? <Text style={{ color: '#666', marginBottom: 6 }}>Year: {year}</Text> : null}
         {plot ? <Text style={{ color: '#666', marginBottom: 6 }}>{plot}</Text> : null}
@@ -293,7 +292,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: colors.subtle },
   heading: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: colors.text },
   input: { backgroundColor: colors.surface, padding: 10, borderRadius: 8, marginBottom: 10, color: colors.text },
-  searchContainer: { position: 'relative', zIndex: 10 },
+  searchContainer: { position: 'relative', zIndex: 10, overflow: 'visible' },
   pickerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   picker: { flex: 1, backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   buttons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
@@ -304,18 +303,12 @@ const styles = StyleSheet.create({
   sectionDropdownContainer: { backgroundColor: colors.surface, borderRadius: 8, overflow: 'hidden' },
   sectionItem: { paddingVertical: 12, paddingHorizontal: 16, borderBottomColor: '#111', borderBottomWidth: 1 },
   sectionItemText: { color: colors.text },
-  dropdown: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 54,
+  resultsDropdown: {
+    maxHeight: 400,
     backgroundColor: colors.surface,
     borderRadius: 8,
-    shadowColor: colors.elevationShadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 12,
-    zIndex: 1000,
-    padding: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.muted + '30',
   },
 });
