@@ -8,6 +8,7 @@ import { Movie } from './_types';
 import AddMovieModal from './components/AddMovieModal';
 import MovieCard from './components/MovieCard';
 import MovieDetailsModal from './components/MovieDetailsModal';
+import SearchScreen from './components/SearchScreen';
 
 // Try to use AsyncStorage if available. If not, fallback to in-memory.
 let AsyncStorage: any = null;
@@ -33,6 +34,7 @@ export default function Index() {
   const [showDetails, setShowDetails] = useState(false);
   const [showImportText, setShowImportText] = useState(false);
   const [importText, setImportText] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -183,9 +185,14 @@ export default function Index() {
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => setShowAdd(true)}>
-          <Text style={{ color: colors.primary, fontWeight: '700' }}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowSearch(true)}>
+            <Text style={{ color: colors.primary, fontWeight: '700', marginRight: 12 }}>🔍</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAdd(true)}>
+            <Text style={{ color: colors.primary, fontWeight: '700' }}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -224,7 +231,7 @@ export default function Index() {
               <Text style={styles.backupButtonText}>Import Text</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.menuHint}>Backup/Restore • swipe ←</Text>
+          <Text style={styles.menuHint}>Backup/Restore</Text>
         </View>
       </ScrollView>
 
@@ -312,6 +319,31 @@ export default function Index() {
           setShowDetails(false);
         }}
       />
+
+      <Modal
+        visible={showSearch}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSearch(false)}
+      >
+        <SafeAreaView style={styles.searchModalContainer}>
+          <View style={styles.searchHeader}>
+            <TouchableOpacity onPress={() => setShowSearch(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.searchTitle}>Search & Filter</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <SearchScreen
+            allMovies={[...watchedMovies, ...toWatchMovies]}
+            onSelectMovie={(movie: Movie) => {
+              setSelected(movie);
+              setShowDetails(true);
+              setShowSearch(false);
+            }}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -440,4 +472,32 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchModalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.muted + '20',
+  },
+  searchTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  closeButton: {
+    fontSize: 24,
+    color: colors.muted,
+    fontWeight: '600',
+  },
 });

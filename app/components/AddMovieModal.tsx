@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  BackHandler,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    BackHandler,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
 import { Movie, Section } from '../_types';
@@ -187,7 +188,7 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.heading}>{isToWatch ? 'Add movie to watch' : 'Add watched movie'}</Text>
 
         <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
@@ -272,14 +273,14 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
             <Text style={styles.buttonTextPrimary}>Add</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  heading: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, color: colors.text },
+  heading: { fontSize: 20, fontWeight: '700', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, color: colors.text },
   scrollContent: { flex: 1, paddingHorizontal: 16 },
   input: { backgroundColor: colors.surface, padding: 12, borderRadius: 10, marginBottom: 12, color: colors.text, fontSize: 16 },
   searchContainer: { marginBottom: 12 },
