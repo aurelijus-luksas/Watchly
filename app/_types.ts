@@ -21,6 +21,8 @@ export type Movie = {
   // OMDb runtime string like '142 min'
   runtime?: string;
   createdAt?: string;
+  // date when the user marked it as watched
+  watchedAt?: string;
 };
 
 // Provide a no-op default export so expo-router does not warn about missing default export.

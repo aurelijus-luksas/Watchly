@@ -69,6 +69,8 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
     }
     setRatingError(undefined);
 
+    const timestamp = new Date().toISOString();
+
     const movie: Movie = {
       id: String(Date.now()),
       title: title.trim(),
@@ -83,7 +85,8 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
       mediaType,
       section,
       comment: comment.trim() || undefined,
-      createdAt: new Date().toISOString(),
+      createdAt: timestamp,
+      watchedAt: isToWatch ? undefined : timestamp,
     };
     onAdd(movie);
     // reset

@@ -59,6 +59,13 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
   // If no movie provided, render nothing. This check must be after hooks.
   if (!movie) return null;
 
+  function formatDate(dateString?: string) {
+    if (!dateString) return null;
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString();
+  }
+
   function handleSave() {
     const m = movie!;
     const updated: Movie = {
@@ -75,6 +82,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       section: m.section,
       comment: localComment.trim() || undefined,
       createdAt: m.createdAt,
+      watchedAt: m.watchedAt,
     };
     try { onUpdate?.(updated); } catch (e) {}
     onClose();
@@ -91,6 +99,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       return;
     }
     const m = movie!;
+    const watchedTimestamp = new Date().toISOString();
     const watchedMovie: Movie = {
       id: m.id,
       title: m.title,
@@ -105,6 +114,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       section: m.section,
       comment: localComment.trim() || undefined,
       createdAt: m.createdAt,
+      watchedAt: watchedTimestamp,
     };
     try { onMarkAsWatched?.(watchedMovie, rating); } catch (e) {}
     onClose();
@@ -121,6 +131,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
           {movie.genre ? <Text style={styles.meta}> • {movie.genre}</Text> : null}
         </View>
         {movie.imdbRating ? <Text style={styles.meta}>IMDB: {movie.imdbRating}</Text> : null}
+        {movie.watchedAt ? <Text style={styles.meta}>Watched on: {formatDate(movie.watchedAt)}</Text> : null}
 
         {details?.Director ? <Text style={styles.meta}>Director: {details.Director}</Text> : null}
         {details?.Writer ? <Text style={styles.meta}>Writer: {details.Writer}</Text> : null}

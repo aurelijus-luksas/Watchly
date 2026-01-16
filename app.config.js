@@ -9,11 +9,11 @@ if (fs.existsSync('.env')) {
 
 module.exports = ({ config }) => ({
   ...config,
-  name: 'Movie-Rate',
-  slug: 'Movie-Rate',
+  name: 'Watchly',
+  slug: 'Watchly',
   owner: 'aurelijusluksas',
   android: {
-    package: 'com.aurelijusluksas.movierate',
+    package: 'com.aurelijusluksas.watchly',
   },
   extra: {
     ...(config.extra || {}),

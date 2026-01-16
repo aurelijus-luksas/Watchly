@@ -18,7 +18,7 @@ export default function MovieCard({ movie, onPress }: Props) {
           <View style={styles.posterPlaceholder} />
         )}
 
-        <View style={{ flex: 1, justifyContent: 'space-between' }}>
+        <View style={styles.content}>
           <View>
             <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
               {movie.title}
@@ -32,7 +32,7 @@ export default function MovieCard({ movie, onPress }: Props) {
             {movie.comment ? <Text style={styles.comment} numberOfLines={2}>{movie.comment}</Text> : null}
           </View>
 
-          <View style={styles.badgeRow}>
+          <View style={styles.footerRow}>
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingText}>{movie.rating ?? '—'}</Text>
             </View>
@@ -54,7 +54,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  row: { flexDirection: 'row', alignItems: 'flex-start' },
+  row: { flexDirection: 'row', alignItems: 'stretch' },
+  content: { flex: 1, justifyContent: 'space-between' },
   poster: { width: 84, height: 126, borderRadius: 8, marginRight: 14, backgroundColor: '#111' },
   posterPlaceholder: { width: 84, height: 126, borderRadius: 8, marginRight: 14, backgroundColor: '#111' },
   header: {
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '700', color: colors.text },
   rating: { fontSize: 14, color: colors.text },
   section: { fontSize: 12, color: colors.muted, marginBottom: 6 },
-  comment: { fontSize: 13, color: colors.muted },
+  comment: { fontSize: 13, color: colors.muted},
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   sectionPill: {
     backgroundColor: colors.subtle,
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
   },
   genre: { color: colors.muted, fontSize: 12, marginTop: 6 },
   imdb: { color: colors.muted, fontSize: 12 },
-  badgeRow: { alignItems: 'flex-end' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end'},
   ratingBadge: {
     backgroundColor: colors.background,
     paddingVertical: 6,
