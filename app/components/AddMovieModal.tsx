@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    BackHandler,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  BackHandler,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../_constants/colors';
@@ -20,11 +20,13 @@ type Props = {
   onClose: () => void;
   onAdd: (movie: Movie) => void;
   isToWatch?: boolean;
+  watchedMovies?: Movie[];
+  toWatchMovies?: Movie[];
 };
 
 const sections: Section[] = ['recommend', 'good', 'neutral', 'bad'];
 
-export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Props) {
+export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watchedMovies = [], toWatchMovies = [] }: Props) {
   const [title, setTitle] = useState('');
   const [rating, setRating] = useState<string>('');
   const [section, setSection] = useState<Section>('recommend');
@@ -46,15 +48,27 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
-  function dedupeByImdbId(items: Array<{ imdbID: string }>) {
+  function dedupeByImdbId<T extends { imdbID: string }>(items: Array<T>): Array<T> {
     const seen = new Set<string>();
-    const unique: typeof items = [];
+    const unique: Array<T> = [];
     for (const item of items) {
       if (seen.has(item.imdbID)) continue;
       seen.add(item.imdbID);
       unique.push(item);
     }
     return unique;
+  }
+
+  function isMovieAlreadyAdded(imdbID: string): { exists: boolean; list?: 'watched' | 'toWatch' } {
+    // Check watched movies first (they're prioritized)
+    const inWatched = watchedMovies.find(m => m.imdbID === imdbID);
+    if (inWatched) return { exists: true, list: 'watched' };
+    
+    // Then check to-watch movies
+    const inToWatch = toWatchMovies.find(m => m.imdbID === imdbID);
+    if (inToWatch) return { exists: true, list: 'toWatch' };
+    
+    return { exists: false };
   }
 
   function handleAdd() {
@@ -83,7 +97,7 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
   runtime,
       genre,
       mediaType,
-      section,
+      section: isToWatch ? undefined : section,
       comment: comment.trim() || undefined,
       createdAt: timestamp,
       watchedAt: isToWatch ? undefined : timestamp,
@@ -208,25 +222,33 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
 
           {results.length > 0 && (
             <View style={styles.resultsDropdown}>
-              {results.map((item) => (
-                <TouchableOpacity
-                  key={item.imdbID}
-                  style={styles.resultRow}
-                  onPress={() => {
-                    pickResult(item);
-                  }}
-                >
-                  {item.Poster && item.Poster !== 'N/A' ? (
-                    <Image source={{ uri: item.Poster }} style={styles.resultPoster} />
-                  ) : (
-                    <View style={[styles.resultPoster, { backgroundColor: '#ddd' }]} />
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: '600', color: colors.text }}>{item.Title}</Text>
-                    <Text style={{ color: colors.muted }}>{item.Year}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {results.map((item) => {
+                const alreadyAdded = isMovieAlreadyAdded(item.imdbID);
+                return (
+                  <TouchableOpacity
+                    key={item.imdbID}
+                    style={[styles.resultRow, alreadyAdded.exists && styles.resultRowDisabled]}
+                    onPress={() => {
+                      if (alreadyAdded.exists) return;
+                      pickResult(item);
+                    }}
+                    disabled={alreadyAdded.exists}
+                  >
+                    {item.Poster && item.Poster !== 'N/A' ? (
+                      <Image source={{ uri: item.Poster }} style={[styles.resultPoster, alreadyAdded.exists && styles.resultPosterDisabled]} />
+                    ) : (
+                      <View style={[styles.resultPoster, { backgroundColor: '#ddd' }, alreadyAdded.exists && styles.resultPosterDisabled]} />
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[{ fontWeight: '600', color: colors.text }, alreadyAdded.exists && styles.resultTextDisabled]}>{item.Title}</Text>
+                      <Text style={[{ color: colors.muted }, alreadyAdded.exists && styles.resultTextDisabled]}>{item.Year}</Text>
+                      {alreadyAdded.exists && (
+                        <Text style={styles.alreadyAddedText}>Already in {alreadyAdded.list === 'watched' ? 'watched' : 'to watch'}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
@@ -250,20 +272,24 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch }: Pr
           {year ? <Text style={{ color: '#666', marginBottom: 6 }}>Year: {year}</Text> : null}
           {plot ? <Text style={{ color: '#666', marginBottom: 6 }}>{plot}</Text> : null}
 
-          <Text style={styles.sectionLabel}>Section:</Text>
-          <View style={styles.sectionButtonsRow}>
-            {sections.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[styles.sectionButton, section === s && styles.sectionButtonActive]}
-                onPress={() => setSection(s)}
-              >
-                <Text style={[styles.sectionButtonText, section === s && styles.sectionButtonTextActive]}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {!isToWatch && (
+            <>
+              <Text style={styles.sectionLabel}>Section:</Text>
+              <View style={styles.sectionButtonsRow}>
+                {sections.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.sectionButton, section === s && styles.sectionButtonActive]}
+                    onPress={() => setSection(s)}
+                  >
+                    <Text style={[styles.sectionButtonText, section === s && styles.sectionButtonTextActive]}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
           <TextInput placeholder="Comment" value={comment} onChangeText={setComment} style={[styles.input, { height: 80 }]} multiline placeholderTextColor={colors.text} />
         </ScrollView>
@@ -340,7 +366,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultRow: { flexDirection: 'row', padding: 12, alignItems: 'center', borderRadius: 10, marginBottom: 8 },
+  resultRowDisabled: { opacity: 0.5, backgroundColor: colors.surface + '80' },
   resultPoster: { width: 48, height: 72, borderRadius: 6, marginRight: 12 },
+  resultPosterDisabled: { opacity: 0.4 },
+  resultTextDisabled: { opacity: 0.6 },
+  alreadyAddedText: { color: colors.primary, fontSize: 12, marginTop: 2, fontStyle: 'italic' },
   missingKey: { color: '#b33', marginBottom: 12, fontSize: 14 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
   sectionDropdownContainer: { backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' },

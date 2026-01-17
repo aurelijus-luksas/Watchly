@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
-import { Movie } from '../_types';
+import { Movie, Section } from '../_types';
 
 type Props = {
   visible: boolean;
@@ -14,6 +14,8 @@ type Props = {
   onMarkAsWatched?: (movie: Movie, rating: number) => void;
 };
 
+const sections: Section[] = ['recommend', 'good', 'neutral', 'bad'];
+
 export default function MovieDetailsModal({ visible, movie, onClose, onDelete, onUpdate, isToWatch, onMarkAsWatched }: Props) {
   // Hooks must be called unconditionally. Initialize state using optional chaining
   const [deleteArmed, setDeleteArmed] = useState(false);
@@ -22,6 +24,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [localRating, setLocalRating] = useState<string>(movie && movie.rating !== undefined ? String(movie.rating) : '');
   const [localComment, setLocalComment] = useState<string>(movie?.comment ?? '');
+  const [localSection, setLocalSection] = useState<Section>(movie?.section || 'recommend');
 
   useEffect(() => {
     if (!visible) return;
@@ -39,6 +42,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
     setLoadingDetails(false);
     setLocalRating(movie && movie.rating !== undefined ? String(movie.rating) : '');
     setLocalComment(movie?.comment ?? '');
+    setLocalSection(movie?.section || 'recommend');
     if (!visible) return;
     if (!movie?.imdbID) return;
     if (!OMDB_API_KEY) return;
@@ -79,7 +83,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       imdbRating: m.imdbRating,
       genre: m.genre,
       mediaType: m.mediaType,
-      section: m.section,
+      section: localSection,
       comment: localComment.trim() || undefined,
       createdAt: m.createdAt,
       watchedAt: m.watchedAt,
@@ -111,7 +115,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       imdbRating: m.imdbRating,
       genre: m.genre,
       mediaType: m.mediaType,
-      section: m.section,
+      section: localSection,
       comment: localComment.trim() || undefined,
       createdAt: m.createdAt,
       watchedAt: watchedTimestamp,
@@ -148,6 +152,25 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
           placeholderTextColor={colors.muted}
           style={styles.input}
         />
+
+        {isToWatch && (
+          <>
+            <Text style={[styles.commentLabel, { marginTop: 12 }]}>Section</Text>
+            <View style={styles.sectionButtonsRow}>
+              {sections.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sectionButton, localSection === s && styles.sectionButtonActive]}
+                  onPress={() => setLocalSection(s)}
+                >
+                  <Text style={[styles.sectionButtonText, localSection === s && styles.sectionButtonTextActive]}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={[styles.commentLabel, { marginTop: 12 }]}>Your note</Text>
         <TextInput
@@ -256,6 +279,28 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#cc3333',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  sectionButtonsRow: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  sectionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.muted + '30',
+  },
+  sectionButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sectionButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sectionButtonTextActive: {
+    color: '#fff',
     fontWeight: '600',
   },
 });

@@ -130,7 +130,7 @@ export default function Index() {
       const result = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
       if (result.canceled || !result.assets || result.assets.length === 0) return;
       const asset = result.assets[0];
-      const content = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 });
+      const content = await FileSystem.readAsStringAsync(asset.uri);
       const parsed = JSON.parse(content);
       const nextWatched = Array.isArray(parsed?.watched) ? parsed.watched : parsed?.watchedMovies;
       const nextToWatch = Array.isArray(parsed?.toWatch) ? parsed.toWatch : parsed?.toWatchMovies;
@@ -314,6 +314,8 @@ export default function Index() {
           setShowAdd(false);
         }}
         isToWatch={activeTab === 'toWatch'}
+        watchedMovies={watchedMovies}
+        toWatchMovies={toWatchMovies}
       />
 
       <MovieDetailsModal
