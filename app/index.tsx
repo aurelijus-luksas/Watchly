@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, FlatList, Modal, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from './_constants/colors';
@@ -25,6 +25,7 @@ const BACKUP_FILE_NAME = 'movierate-backup.json';
 export default function Index() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const isLoadedRef = useRef(false);
   const [activeTab, setActiveTab] = useState<'watched' | 'toWatch'>('watched');
   const [mediaFilter, setMediaFilter] = useState<MediaFilter>('all');
   const [watchedMovies, setWatchedMovies] = useState<Movie[]>([]);
@@ -42,31 +43,53 @@ export default function Index() {
         try {
           const watched = await AsyncStorage.getItem('@movieRate:watched');
           const toWatch = await AsyncStorage.getItem('@movieRate:toWatch');
-          if (watched) setWatchedMovies(JSON.parse(watched));
-          if (toWatch) setToWatchMovies(JSON.parse(toWatch));
+          if (watched) {
+            setWatchedMovies(JSON.parse(watched));
+            console.log('✓ Loaded watched movies:', JSON.parse(watched).length);
+          }
+          if (toWatch) {
+            setToWatchMovies(JSON.parse(toWatch));
+            console.log('✓ Loaded to-watch movies:', JSON.parse(toWatch).length);
+          }
+          isLoadedRef.current = true;
         } catch (e) {
-          // ignore
+          console.error('✗ Error loading movies:', e);
+          isLoadedRef.current = true;
         }
+      } else {
+        console.warn('⚠ AsyncStorage not available - no persistence');
+        isLoadedRef.current = true;
       }
     })();
   }, []);
 
   useEffect(() => {
     (async () => {
-      if (AsyncStorage) {
+      if (AsyncStorage && isLoadedRef.current) {
         try {
-          await AsyncStorage.setItem('@movieRate:watched', JSON.stringify(watchedMovies));
-        } catch (e) {}
+          const jsonStr = JSON.stringify(watchedMovies);
+          await AsyncStorage.setItem('@movieRate:watched', jsonStr);
+          console.log('✓ Watched movies saved:', watchedMovies.length, 'bytes:', jsonStr.length);
+        } catch (e) {
+          console.error('✗ Error saving watched movies:', e);
+        }
       }
     })();
   }, [watchedMovies]);
 
   useEffect(() => {
     (async () => {
-      if (AsyncStorage) {
+      if (AsyncStorage && isLoadedRef.current) {
         try {
-          await AsyncStorage.setItem('@movieRate:toWatch', JSON.stringify(toWatchMovies));
-        } catch (e) {}
+          const jsonStr = JSON.stringify(toWatchMovies);
+          await AsyncStorage.setItem('@movieRate:toWatch', jsonStr);
+          console.log('✓ To-watch movies saved:', toWatchMovies.length, 'bytes:', jsonStr.length);
+          // Verify it was actually saved
+          const verify = await AsyncStorage.getItem('@movieRate:toWatch');
+          console.log('✓ Verification - stored data length:', verify?.length);
+        } catch (e) {
+          console.error('✗ Error saving to-watch movies:', e);
+        }
       }
     })();
   }, [toWatchMovies]);

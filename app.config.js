@@ -10,7 +10,7 @@ if (fs.existsSync('.env')) {
 module.exports = ({ config }) => ({
   ...config,
   name: 'Watchly',
-  slug: 'Watchly',
+  slug: 'Movie-Rate',
   owner: 'aurelijusluksas',
   android: {
     package: 'com.aurelijusluksas.watchly',
