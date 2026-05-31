@@ -1,5 +1,7 @@
-Personal project made mostly using AI for an app that lets me add movies thai I've watched and also rate them.
+Personal project made mostly using AI for an app that lets me add movies that I've watched and also rate them.
 Works for me🤷
+Should work for you too :)
+Can compile it and export it to your own phone using Expo website.
 
 # Welcome to your Expo app 👋
 
