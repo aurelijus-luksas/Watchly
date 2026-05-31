@@ -1,3 +1,6 @@
+Personal project made mostly using AI for an app that lets me add movies thai I've watched and also rate them.
+Works for me🤷
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
