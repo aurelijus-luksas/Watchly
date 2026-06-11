@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useRef, useState } from 'react';
@@ -10,17 +11,8 @@ import MovieCard from './components/MovieCard';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import SearchScreen from './components/SearchScreen';
 
-// Try to use AsyncStorage if available. If not, fallback to in-memory.
-let AsyncStorage: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch (e) {
-  // noop - fallback
-}
-
 type MediaFilter = 'all' | 'movies' | 'series' | 'animation';
-const BACKUP_FILE_NAME = 'movierate-backup.json';
+const MEDIA_FILTERS: MediaFilter[] = ['all', 'movies', 'series', 'animation'];
 
 export default function Index() {
   const insets = useSafeAreaInsets();
@@ -45,15 +37,13 @@ export default function Index() {
           const toWatch = await AsyncStorage.getItem('@movieRate:toWatch');
           if (watched) {
             setWatchedMovies(JSON.parse(watched));
-            console.log('✓ Loaded watched movies:', JSON.parse(watched).length);
           }
           if (toWatch) {
             setToWatchMovies(JSON.parse(toWatch));
-            console.log('✓ Loaded to-watch movies:', JSON.parse(toWatch).length);
           }
           isLoadedRef.current = true;
-        } catch (e) {
-          console.error('✗ Error loading movies:', e);
+        } catch {
+          console.error('✗ Error loading movies');
           isLoadedRef.current = true;
         }
       } else {
@@ -69,9 +59,8 @@ export default function Index() {
         try {
           const jsonStr = JSON.stringify(watchedMovies);
           await AsyncStorage.setItem('@movieRate:watched', jsonStr);
-          console.log('✓ Watched movies saved:', watchedMovies.length, 'bytes:', jsonStr.length);
-        } catch (e) {
-          console.error('✗ Error saving watched movies:', e);
+        } catch {
+          console.error('✗ Error saving watched movies');
         }
       }
     })();
@@ -83,12 +72,8 @@ export default function Index() {
         try {
           const jsonStr = JSON.stringify(toWatchMovies);
           await AsyncStorage.setItem('@movieRate:toWatch', jsonStr);
-          console.log('✓ To-watch movies saved:', toWatchMovies.length, 'bytes:', jsonStr.length);
-          // Verify it was actually saved
-          const verify = await AsyncStorage.getItem('@movieRate:toWatch');
-          console.log('✓ Verification - stored data length:', verify?.length);
-        } catch (e) {
-          console.error('✗ Error saving to-watch movies:', e);
+        } catch {
+          console.error('✗ Error saving to-watch movies');
         }
       }
     })();
@@ -115,12 +100,12 @@ export default function Index() {
       try {
         await Share.share({
           message: jsonString,
-          title: 'MovieRate Backup',
+          title: 'Watchly Backup',
         });
-      } catch (e) {
+      } catch {
         Alert.alert('Share error', 'Could not share backup. Try copying the text manually.');
       }
-    } catch (e) {
+    } catch {
       Alert.alert('Export failed', 'Could not create backup.');
     }
   }
@@ -143,7 +128,7 @@ export default function Index() {
       setWatchedMovies(nextWatched as Movie[]);
       setToWatchMovies(nextToWatch as Movie[]);
       Alert.alert('Import complete', 'Lists updated from backup.');
-    } catch (e) {
+    } catch {
       Alert.alert('Import failed', 'Could not read or parse the backup file.');
     }
   }
@@ -168,7 +153,7 @@ export default function Index() {
       setImportText('');
       setShowImportText(false);
       Alert.alert('Import complete', 'Lists updated from backup.');
-    } catch (e) {
+    } catch {
       Alert.alert('Import failed', 'Invalid JSON format.');
     }
   }
@@ -227,7 +212,7 @@ export default function Index() {
       >
         <View style={[styles.menuPage, { width }]}>
           <View style={styles.filterContainer}>
-            {(['all', 'movies', 'series', 'animation'] as MediaFilter[]).map((filter) => (
+            {MEDIA_FILTERS.map((filter) => (
               <TouchableOpacity
                 key={filter}
                 style={[styles.filterButton, mediaFilter === filter && styles.activeFilterButton]}

@@ -19,13 +19,11 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [selectedMediaTypes, setSelectedMediaTypes] = useState<Set<string>>(new Set());
 
-  // Get unique sections from movies
   const uniqueSections = useMemo(() => {
     const sections = new Set(allMovies.map((m) => m.section).filter(Boolean) as Section[]);
     return Array.from(sections).sort();
   }, [allMovies]);
 
-  // Get unique genres from movies (excluding "Animation" which is handled as media type)
   const uniqueGenres = useMemo(() => {
     const genres = new Set<string>();
     allMovies.forEach((m) => {
@@ -41,17 +39,14 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
     return Array.from(genres).sort();
   }, [allMovies]);
 
-  // Filter movies based on search criteria
   const filteredMovies = useMemo(() => {
     let results = [...allMovies];
 
-    // Filter by name
     if (searchText.trim()) {
       const searchLower = searchText.toLowerCase();
       results = results.filter((m) => m.title.toLowerCase().includes(searchLower));
     }
 
-    // Filter by minimum rating
     if (minRating) {
       const min = parseFloat(minRating);
       if (!isNaN(min)) {
@@ -59,7 +54,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
       }
     }
 
-    // Filter by maximum rating
     if (maxRating) {
       const max = parseFloat(maxRating);
       if (!isNaN(max)) {
@@ -67,12 +61,10 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
       }
     }
 
-    // Filter by section
     if (selectedSection !== 'all') {
       results = results.filter((m) => m.section === selectedSection);
     }
 
-    // Filter by genre (multiple selection)
     if (selectedGenres.size > 0) {
       results = results.filter((m) => {
         if (!m.genre) return false;
@@ -80,21 +72,17 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
       });
     }
 
-    // Filter by media type (multiple selection)
     if (selectedMediaTypes.size > 0) {
       results = results.filter((m) => {
-        // Handle "Animation" as a genre filter
         if (selectedMediaTypes.has('Animation')) {
           const hasAnimation = m.genre?.split(',').some((g) => g.trim() === 'Animation');
           if (selectedMediaTypes.size === 1) {
             return hasAnimation;
           }
-          // If Animation is selected with other types, check if it has Animation genre OR matches other types
           const otherTypes = Array.from(selectedMediaTypes).filter((t) => t !== 'Animation');
           const matchesOtherTypes = otherTypes.some((type) => m.mediaType?.toLowerCase() === type.toLowerCase());
           return hasAnimation || matchesOtherTypes;
         }
-        // For non-Animation types, match mediaType
         const mediaType = m.mediaType?.toLowerCase();
         return Array.from(selectedMediaTypes).some((type) => mediaType === type.toLowerCase());
       });
@@ -107,7 +95,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Search & Filter</Text>
 
-      {/* Search Input */}
       <View style={styles.section}>
         <Text style={styles.label}>Movie Name</Text>
         <TextInput
@@ -119,7 +106,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
         />
       </View>
 
-      {/* Rating Range */}
       <View style={styles.section}>
         <Text style={styles.label}>Rating Range</Text>
         <View style={styles.ratingRow}>
@@ -148,7 +134,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
         </View>
       </View>
 
-      {/* Section Filter */}
       {uniqueSections.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.label}>Section</Text>
@@ -174,7 +159,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
         </View>
       )}
 
-      {/* Genre Filter */}
       {uniqueGenres.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.label}>Genre</Text>
@@ -202,7 +186,6 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
         </View>
       )}
 
-      {/* Media Type Filter */}
       <View style={styles.section}>
         <Text style={styles.label}>Media Type</Text>
         <View style={styles.filterGrid}>
@@ -228,12 +211,10 @@ export default function SearchScreen({ allMovies, onSelectMovie }: SearchScreenP
         </View>
       </View>
 
-      {/* Results Count */}
       <Text style={styles.resultCount}>
         {filteredMovies.length} result{filteredMovies.length !== 1 ? 's' : ''}
       </Text>
 
-      {/* Movie Results */}
       {filteredMovies.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No movies found matching your filters</Text>

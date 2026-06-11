@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import colors from '../_constants/colors';
 import { OMDB_API_KEY, OMDB_BASE } from '../_constants/config';
 import { Movie, Section } from '../_types';
@@ -17,9 +17,8 @@ type Props = {
 const sections: Section[] = ['recommend', 'good', 'neutral', 'bad'];
 
 export default function MovieDetailsModal({ visible, movie, onClose, onDelete, onUpdate, isToWatch, onMarkAsWatched }: Props) {
-  // Hooks must be called unconditionally. Initialize state using optional chaining
   const [deleteArmed, setDeleteArmed] = useState(false);
-  const deleteTimeoutRef = React.useRef<number | null>(null);
+  const deleteTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [details, setDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [localRating, setLocalRating] = useState<string>(movie && movie.rating !== undefined ? String(movie.rating) : '');
@@ -34,9 +33,8 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [visible]);
+  }, [visible, onClose]);
 
-  // load remote OMDb details when modal opens
   useEffect(() => {
     setDetails(null);
     setLoadingDetails(false);
@@ -52,15 +50,13 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
         const res = await fetch(`${OMDB_BASE}?apikey=${OMDB_API_KEY}&i=${encodeURIComponent(movie.imdbID as string)}&plot=full`);
         const json = await res.json();
         if (json.Response === 'True') setDetails(json);
-      } catch (e) {
-        // ignore
+      } catch {
       } finally {
         setLoadingDetails(false);
       }
     })();
-  }, [visible, movie?.imdbID]);
+  }, [visible, movie, onClose]);
 
-  // If no movie provided, render nothing. This check must be after hooks.
   if (!movie) return null;
 
   function formatDate(dateString?: string) {
@@ -88,18 +84,18 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       createdAt: m.createdAt,
       watchedAt: m.watchedAt,
     };
-    try { onUpdate?.(updated); } catch (e) {}
+    try { onUpdate?.(updated); } catch {}
     onClose();
   }
 
   function handleMarkAsWatched() {
     if (!localRating.trim()) {
-      alert('Please enter a rating (1-10)');
+      Alert.alert('Missing rating', 'Please enter a rating from 1 to 10.');
       return;
     }
     const rating = Number(localRating);
     if (Number.isNaN(rating) || rating < 1 || rating > 10) {
-      alert('Rating must be a number between 1 and 10');
+      Alert.alert('Invalid rating', 'Rating must be a number between 1 and 10.');
       return;
     }
     const m = movie!;
@@ -120,7 +116,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
       createdAt: m.createdAt,
       watchedAt: watchedTimestamp,
     };
-    try { onMarkAsWatched?.(watchedMovie, rating); } catch (e) {}
+    try { onMarkAsWatched?.(watchedMovie, rating); } catch {}
     onClose();
   }
 
@@ -140,6 +136,7 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
         {details?.Director ? <Text style={styles.meta}>Director: {details.Director}</Text> : null}
         {details?.Writer ? <Text style={styles.meta}>Writer: {details.Writer}</Text> : null}
         {details?.Runtime ? <Text style={styles.meta}>Runtime: {details.Runtime}</Text> : null}
+        {loadingDetails ? <Text style={styles.meta}>Loading details...</Text> : null}
 
         {movie.plot ? <Text style={styles.plot}>{movie.plot}</Text> : null}
 
@@ -197,7 +194,6 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
           )}
         </View>
 
-        {/* Delete placed at the very bottom so user must scroll down to see it */}
         <View style={{ height: 300 }} />
         <View style={{ alignItems: 'center', marginBottom: 60 }}>
           <TouchableOpacity 
@@ -205,14 +201,13 @@ export default function MovieDetailsModal({ visible, movie, onClose, onDelete, o
             onPress={() => {
               if (!deleteArmed) {
                 setDeleteArmed(true);
-                deleteTimeoutRef.current = setTimeout(() => setDeleteArmed(false), 4000) as unknown as number;
+                deleteTimeoutRef.current = setTimeout(() => setDeleteArmed(false), 4000);
                 return;
               }
-              // confirmed
-              try { (onDelete as any)?.(movie.id); } catch (e) {}
+              try { (onDelete as any)?.(movie.id); } catch {}
               setDeleteArmed(false);
               if (deleteTimeoutRef.current) {
-                clearTimeout(deleteTimeoutRef.current as unknown as number);
+                clearTimeout(deleteTimeoutRef.current);
                 deleteTimeoutRef.current = null;
               }
               onClose();

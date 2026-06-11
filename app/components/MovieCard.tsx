@@ -26,7 +26,7 @@ export default function MovieCard({ movie, onPress }: Props) {
             <View style={styles.metaRow}>
               <Text style={styles.sectionPill}>{movie.section ?? 'Unsorted'}</Text>
               {movie.mediaType ? <Text style={styles.typePill}>{movie.mediaType}</Text> : null}
-              {movie.imdbRating ? <Text style={styles.imdb}>IMDB {movie.imdbRating}</Text> : null}
+              {movie.imdbRating ? <Text style={styles.imdb}>IMDb {movie.imdbRating}</Text> : null}
             </View>
             {movie.genre ? <Text style={styles.genre} numberOfLines={1}>{movie.genre}</Text> : null}
             {movie.comment ? <Text style={styles.comment} numberOfLines={2}>{movie.comment}</Text> : null}
@@ -58,16 +58,8 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'space-between' },
   poster: { width: 84, height: 126, borderRadius: 8, marginRight: 14, backgroundColor: '#111' },
   posterPlaceholder: { width: 84, height: 126, borderRadius: 8, marginRight: 14, backgroundColor: '#111' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
   title: { fontSize: 16, fontWeight: '700', color: colors.text },
-  rating: { fontSize: 14, color: colors.text },
-  section: { fontSize: 12, color: colors.muted, marginBottom: 6 },
-  comment: { fontSize: 13, color: colors.muted},
+  comment: { fontSize: 13, color: colors.muted },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   sectionPill: {
     backgroundColor: colors.subtle,

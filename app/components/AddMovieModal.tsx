@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BackHandler,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    BackHandler,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../_constants/colors';
@@ -26,11 +26,21 @@ type Props = {
 
 const sections: Section[] = ['recommend', 'good', 'neutral', 'bad'];
 
+function dedupeByImdbId<T extends { imdbID: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.imdbID)) continue;
+    seen.add(item.imdbID);
+    unique.push(item);
+  }
+  return unique;
+}
+
 export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watchedMovies = [], toWatchMovies = [] }: Props) {
   const [title, setTitle] = useState('');
   const [rating, setRating] = useState<string>('');
   const [section, setSection] = useState<Section>('recommend');
-  const [sectionPickerVisible, setSectionPickerVisible] = useState(false);
   const [comment, setComment] = useState('');
   const [ratingError, setRatingError] = useState<string | undefined>(undefined);
   const [poster, setPoster] = useState<string | undefined>(undefined);
@@ -42,38 +52,23 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watc
   const [mediaType, setMediaType] = useState<string | undefined>(undefined);
   const [runtime, setRuntime] = useState<string | undefined>(undefined);
 
-  // search state
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ Title: string; Year: string; imdbID: string; Poster: string }>>([]);
+  const [results, setResults] = useState<{ Title: string; Year: string; imdbID: string; Poster: string }[]>([]);
   const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<number | null>(null);
-
-  function dedupeByImdbId<T extends { imdbID: string }>(items: Array<T>): Array<T> {
-    const seen = new Set<string>();
-    const unique: Array<T> = [];
-    for (const item of items) {
-      if (seen.has(item.imdbID)) continue;
-      seen.add(item.imdbID);
-      unique.push(item);
-    }
-    return unique;
-  }
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function isMovieAlreadyAdded(imdbID: string): { exists: boolean; list?: 'watched' | 'toWatch' } {
-    // Check watched movies first (they're prioritized)
     const inWatched = watchedMovies.find(m => m.imdbID === imdbID);
     if (inWatched) return { exists: true, list: 'watched' };
-    
-    // Then check to-watch movies
+
     const inToWatch = toWatchMovies.find(m => m.imdbID === imdbID);
     if (inToWatch) return { exists: true, list: 'toWatch' };
-    
+
     return { exists: false };
   }
 
   function handleAdd() {
     if (!title.trim()) return;
-    // validate rating if provided (not required for toWatch)
     if (!isToWatch && rating.trim()) {
       const n = Number(rating);
       if (Number.isNaN(n) || n < 1 || n > 10) {
@@ -94,7 +89,7 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watc
       year,
       plot,
       imdbRating,
-  runtime,
+      runtime,
       genre,
       mediaType,
       section: isToWatch ? undefined : section,
@@ -103,7 +98,6 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watc
       watchedAt: isToWatch ? undefined : timestamp,
     };
     onAdd(movie);
-    // reset
     setTitle('');
     setRating('');
     setSection('recommend');
@@ -120,13 +114,12 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watc
     onClose();
   }
 
-  async function searchOmdb(q: string) {
+  const searchOmdb = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
       return;
     }
     setSearching(true);
-    // don't call OMDb when key is missing
     if (!OMDB_API_KEY) {
       setResults([]);
       setSearching(false);
@@ -140,68 +133,61 @@ export default function AddMovieModal({ visible, onClose, onAdd, isToWatch, watc
       } else {
         setResults([]);
       }
-    } catch (e) {
+    } catch {
       setResults([]);
     } finally {
       setSearching(false);
     }
-  }
+  }, []);
 
-  async function fetchMovieDetailsById(id: string) {
+  const fetchMovieDetailsById = useCallback(async (id: string) => {
     if (!OMDB_API_KEY) return null;
     try {
       const res = await fetch(`${OMDB_BASE}?apikey=${OMDB_API_KEY}&i=${encodeURIComponent(id)}&plot=short`);
       const json = await res.json();
       if (json.Response === 'True') return json;
-    } catch (e) {
-      // ignore
+    } catch {
     }
     return null;
-  }
+  }, []);
 
   async function pickResult(item: { Title: string; Year: string; imdbID: string; Poster: string }) {
-    // fetch full details
     const details = await fetchMovieDetailsById(item.imdbID);
     setTitle(item.Title);
     setPoster(item.Poster !== 'N/A' ? item.Poster : details?.Poster !== 'N/A' ? details?.Poster : undefined);
     setYear(item.Year || details?.Year);
     setPlot(details?.Plot);
     setImdbID(item.imdbID);
-      setImdbRating(details?.imdbRating);
-      setGenre(details?.Genre);
-      setMediaType(details?.Type);
-      setRuntime(details?.Runtime);
-    // clear search UI
+    setImdbRating(details?.imdbRating);
+    setGenre(details?.Genre);
+    setMediaType(details?.Type);
+    setRuntime(details?.Runtime);
     setResults([]);
     setQuery('');
   }
 
-  // debounce search input to avoid spamming the API
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    // small debounce
-    // @ts-ignore - window.setTimeout number vs NodeJS.Timer cross-env
     debounceRef.current = setTimeout(() => {
       searchOmdb(query);
-    }, 350) as unknown as number;
+    }, 350);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current as unknown as number);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, searchOmdb]);
 
-  // handle Android hardware back button while modal visible
   useEffect(() => {
     if (!visible) return;
     const onBack = () => {
       onClose();
-      return true; // handled
+      return true;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [visible]);
+  }, [visible, onClose]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
